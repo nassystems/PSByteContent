@@ -46,7 +46,7 @@ function Select-ByteContent {
         [Byte[]] $InputObject)
     begin {
         $ErrorActionPreference = [System.Management.Automation.ActionPreference]::Stop
-        Set-StrictMode -Version 2
+        Set-StrictMode -Version 3
         
         $totalreadlength = [int64] 0
         $totalwritelength = [int64] 0
@@ -191,7 +191,7 @@ function ConvertFrom-ByteContent {
         [Byte[]] $InputObject)
     begin {
         $ErrorActionPreference = [System.Management.Automation.ActionPreference]::Stop
-        Set-StrictMode -Version 2
+        Set-StrictMode -Version 3
         
         if($null -eq (Get-Variable -Scope Local |? {$_.Name -eq 'SeparatorHash'} |% {$_.Value})) {
             $SeparatorHash = @{}
@@ -302,7 +302,7 @@ function Open-FileStream {
         [System.IO.FileShare]  $FileShare  = ([System.IO.FileShare]::Read))
     
     $ErrorActionPreference = [System.Management.Automation.ActionPreference]::Stop
-    Set-StrictMode -Version 2
+    Set-StrictMode -Version 3
     
     $currentpath = [System.Environment]::CurrentDirectory
     try {
@@ -322,7 +322,7 @@ function Close-Stream {
         [System.IO.Stream] $InputObject)
     
     $ErrorActionPreference = [System.Management.Automation.ActionPreference]::Stop
-    Set-StrictMode -Version 2
+    Set-StrictMode -Version 3
     
     $InputObject.Close()
 }
@@ -344,7 +344,7 @@ function Add-ByteContent {
         [Byte[]] $InputObject)
     begin {
         $ErrorActionPreference = [System.Management.Automation.ActionPreference]::Stop
-        Set-StrictMode -Version 2
+        Set-StrictMode -Version 3
         
         $disposerequiredlist = New-Object System.Collections.Generic.List[System.IDisposable]
         try {
@@ -415,7 +415,7 @@ function Get-ByteContent {
         [switch] $ShowDotProgress)
     
     $ErrorActionPreference = [System.Management.Automation.ActionPreference]::Stop
-    Set-StrictMode -Version 2
+    Set-StrictMode -Version 3
     
     New-Variable -Name MaxBufferSize -Value $BufferSize -Option Constant
     $buffer = New-Object Byte[] $MaxBufferSize
@@ -541,7 +541,7 @@ function Set-ByteContent {
         [Byte[]] $InputObject)
     begin {
         $ErrorActionPreference = [System.Management.Automation.ActionPreference]::Stop
-        Set-StrictMode -Version 2
+        Set-StrictMode -Version 3
         
         $resultwrapper = New-Object System.Collections.Generic.List[byte[]]
         $disposerequiredlist = New-Object System.Collections.Generic.List[System.IDisposable]
@@ -607,7 +607,7 @@ function Copy-Stream {
         [switch] $ShowDotProgress)
     
     $ErrorActionPreference = [System.Management.Automation.ActionPreference]::Stop
-    Set-StrictMode -Version 2
+    Set-StrictMode -Version 3
     
     New-Variable -Name MaxBufferSize -Value $BufferSize -Option Constant
     $buffer = New-Object Byte[] $MaxBufferSize
@@ -705,7 +705,7 @@ function Hash-ByteContent {
         [Byte[]] $InputObject)
     begin {
         $ErrorActionPreference = [System.Management.Automation.ActionPreference]::Stop
-        Set-StrictMode -Version 2
+        Set-StrictMode -Version 3
         
         $DisposeRequiredList = New-Object System.Collections.Generic.List[System.IDisposable]
         try {
@@ -792,7 +792,7 @@ function Hash-Stream {
         [switch] $ShowDotProgress)
     
     $ErrorActionPreference = [System.Management.Automation.ActionPreference]::Stop
-    Set-StrictMode -Version 2
+    Set-StrictMode -Version 3
     
     New-Variable -Name MaxBufferSize -Value $BufferSize -Option Constant
     $buffer = New-Object Byte[] $MaxBufferSize
@@ -915,7 +915,7 @@ function Dump-ByteContent {
         [Byte[]] $InputObject)
     begin {
         $ErrorActionPreference = [System.Management.Automation.ActionPreference]::Stop
-        Set-StrictMode -Version 2
+        Set-StrictMode -Version 3
         
         if($BytesPerLine % 8 -ne 0) {
             Write-Error -ErrorRecord (New-Object System.Management.Automation.ErrorRecord (New-Object System.ArgumentException 'BytesPerLine must be a multiple 8.'), $null, ([System.Management.Automation.ErrorCategory]::InvalidArgument), 'BytesPerLine')
