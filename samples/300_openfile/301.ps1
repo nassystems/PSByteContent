@@ -2,14 +2,14 @@
 $tgtfullname = [System.IO.Path]::GetTempFileName()
 $tgtfullname
 try {
-    $s1 = Open-FileStream -LiteralPath $tgtfullname -FileMode Open -FileShare Read
+    $s1 = Open-FileStream -LiteralPath $tgtfullname -FileMode Open -FileAccess Read -FileShare Read
     try {
         Assert ($s1.Name -eq $tgtfullname)
         Assert ($s1.CanRead -eq $true)
         Assert ($s1.CanSeek -eq $true)
         Assert ($s1.CanWrite -eq $false)
         
-        $s2 = Open-FileStream -LiteralPath $tgtfullname -FileMode Open -FileShare Read
+        $s2 = Open-FileStream -LiteralPath $tgtfullname -FileMode Open -FileAccess Read -FileShare Read
         try {
             Assert ($s2.Name -eq $tgtfullname)
             Assert ($s2.CanRead -eq $true)

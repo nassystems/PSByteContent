@@ -322,9 +322,8 @@ function ConvertTo-ByteContent {
 function Open-FileStream {
     <#
     .Synopsis
-    ファイルを開き、ファイルオブジェクトを返す。ファイルオブジェクトは 
-    Close-Stream コマンドレットまたはオブジェクトのメソッドで閉じる必要があ
-    る。
+    ファイルを開き、ファイルオブジェクトを返す。返されたファイルオブジェクト
+    は Close-Stream 関数またはオブジェクトのメソッドで閉じる必要がある。
     .Parameter LiteralPath
     ファイルパスを指定する。
     .Parameter FileMode
@@ -1083,7 +1082,8 @@ function Dump-ByteContent {
     UTF8。
     .Parameter RawCombiningChar
     テキスト表示するとき、結合文字をそのまま出力する。デフォルトは結合文字の
-    直前にゼロ幅スペース (U+200b) を挿入し、基底文字と結合しないようにする。
+    直前にゼロ幅スペース (U+200b) を挿入し、基底文字と結合文字が結合されずそ
+    れぞれ出力されるようにする。
     .Parameter RawSurrogate
     テキスト表示するとき、サロゲート文字をそのまま出力する。デフォルトは四角
     記号 "□" に置き換える。
