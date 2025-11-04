@@ -3,7 +3,7 @@
 PSByteContentLib
 PowerShell でバイナリを扱うための関数群。
 .NOTES
-PSByteContentLib version 1.01
+PSByteContentLib version 1.02
 
 MIT License
 
@@ -30,6 +30,20 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #>
 
 function Select-ByteContent {
+    <#
+    .Synopsis
+    バイト列から選択したバイト列を出力する。
+    .Parameter First
+    入力バイト列の先頭から選択するバイト数を指定する。
+    .Parameter Skip
+    入力バイト列の先頭からスキップするバイト数を指定する。
+    .Parameter Last
+    入力バイト列の末尾から選択するバイト数を指定する。
+    .Parameter AsByte
+    出力をバイト列ではなく 1 バイトずつ出力する。
+    .Parameter InputObject
+    選択するバイト列を指定する。
+    #>
     [CmdletBinding(DefaultParameterSetName='First')]
     param(
         [Parameter(Position=0, ParameterSetName='First')]
@@ -169,9 +183,20 @@ function Select-ByteContent {
 function ConvertFrom-ByteContent {
     <#
     .Synopsis 
-    バイト列を hex 文字列へ変換する。
+    バイト列を HEX 文字列へ変換する。
+    .Parameter BlockLength
+    区切り文字を挿入するバイト数配列を指定する。SeparatorHash と排他。
+    .Parameter Separator
+    BlockLength で指定したバイト数ごとに挿入する区切り文字列を指定する。
+    BlockLength で指定するのと同数の区切り文字列を指定する必要がある。
+    SeparatorHash と排他。
     .Parameter SeparatorHash
-    区切り文字列をハッシュリストで指定する。キーに区切り長を、値に区切り文字列を指定する。
+    区切り文字列をハッシュリストで指定する。キーに区切り長を、値に区切り文字
+    列を指定する。BlockLength および Separator と排他。
+    .Parameter Capital
+    16 進数を大文字で出力する。デフォルトは小文字。
+    .Parameter InputObject
+    変換するバイト列を指定する。
     #>
     [CmdletBinding(DefaultParametersetName='SeparatorHash')]
     param(
@@ -268,10 +293,11 @@ function ConvertFrom-ByteContent {
 function ConvertTo-ByteContent {
     <#
     .Synopsis 
-    hex 文字列をバイト列へ変換する。
+    HEX 文字列をバイト列へ変換する。
     .Description
-    hex 文字列をバイト列へ変換する。
     文字列から 16 進数 2 桁ずつを抽出し、Byte 値へ変換する。それ以外の文字や 1 桁の 16 進数は無視される。
+    .Parameter InputObject
+    変換するHEX 文字列を指定する。
     #>
     [CmdletBinding()]
     param(
@@ -294,6 +320,20 @@ function ConvertTo-ByteContent {
 }
 
 function Open-FileStream {
+    <#
+    .Synopsis
+    ファイルを開き、ファイルオブジェクトを返す。ファイルオブジェクトは 
+    Close-Stream コマンドレットまたはオブジェクトのメソッドで閉じる必要があ
+    る。
+    .Parameter LiteralPath
+    ファイルパスを指定する。
+    .Parameter FileMode
+    ファイルのオープンまたは作成の決定方法を指定する。
+    .Parameter FileAccess
+    ファイルのアクセス方法を指定する。
+    .Parameter FileShare
+    ファイルの共有方法を指定する。
+    #>
     param(
         [Parameter(Mandatory=$true)]
         [string] $LiteralPath,
@@ -317,6 +357,12 @@ function Open-FileStream {
 }
 
 function Close-Stream {
+    <#
+    .Synopsis
+    Open-FileStream で開いたファイルを閉じる。
+    .Parameter InputObject
+    Open-FileStream で開いたファイルオブジェクトを指定する。
+    #>
     param(
         [Parameter(Position=0, Mandatory=$true, ValueFromPipeline=$true)]
         [System.IO.Stream] $InputObject)
@@ -328,6 +374,20 @@ function Close-Stream {
 }
 
 function Add-ByteContent {
+    <#
+    .Synopsis
+    バイト列をストリームまたはファイルへ追記出力する。
+    .Parameter LiteralPath
+    出力ファイルパスを指定する。
+    .Parameter Stream
+    出力ストリームを [System.IO.Stream] 派生クラス インスタンスで指定する。
+    .Parameter PassThru
+    処理中のバイト列を標準出力へ出力する。規定では何も出力しない。
+    .Parameter Close
+    処理後に出力ストリームを閉じる。
+    .Parameter InputObject
+    出力するバイト列を指定する。
+    #>
     [CmdletBinding(DefaultParametersetName='Stream')]
     param(
         [Parameter(ParameterSetName='LiteralPath', Position=0)]
@@ -388,6 +448,33 @@ function Add-ByteContent {
 }
 
 function Get-ByteContent {
+    <#
+    .Synopsis
+    ストリームまたはファイルから入力したバイト列を返す。
+    .Parameter LiteralPath
+    入力ファイルパスを指定する。
+    .Parameter Stream
+    入力ストリームを [System.IO.Stream] 派生クラス インスタンスで指定する。
+    .Parameter First
+    入力バイト列の先頭から選択するバイト数を指定する。
+    .Parameter Skip
+    入力バイト列の先頭からスキップするバイト数を指定する。
+    .Parameter Force
+    入力ファイルパスを指定した場合に、ファイルが書き込みオープン中でも可能な
+    場合は開く。但し、処理中にファイル内容が書き換わると部分的に古い一貫性の
+    ないバイト列を取得し、データが破損するリスクがある。
+    .Parameter Close
+    処理後に入力ストリームを閉じる。
+    .Parameter BufferSize
+    内部バッファサイズ。既定は 1 MB。
+    .Parameter SuppressProgress
+    プログレスバーを非表示にする。なお、入力ストリームがシーク不可能な場合は
+    本オプション指定に関わらずプログレスバーを表示しない。
+    .Parameter ShowDotProgress
+    処理経過をホストへのドット記号出力で示す。BufferSize でサイズ指定するバッ
+    ファを処理するごとに 1 ドットを出力する。入力ストリームがシーク不能な場合
+    でも経過が出力される。
+    #>
     [CmdletBinding(DefaultParametersetName='Stream')]
     param(
         [Parameter(ParameterSetName='LiteralPath', Position=0)]
@@ -532,6 +619,16 @@ function Get-ByteContent {
 }
 
 function Set-ByteContent {
+    <#
+    .Synopsis
+    バイト列をファイルへ出力 (上書き) する。
+    .Parameter LiteralPath
+    出力ファイルパスを指定する。
+    .Parameter PassThru
+    処理中のバイト列を標準出力へ出力する。規定では何も出力しない。
+    .Parameter InputObject
+    出力するバイト列を指定する。
+    #>
     param(
         [Parameter(ParameterSetName='LiteralPath', Position=0)]
         [string] $LiteralPath,
@@ -574,6 +671,33 @@ function Set-ByteContent {
 }
 
 function Copy-Stream {
+    <#
+    .Synopsis
+    ストリームとストリームまたはストリームとファイルの間で入出力する。
+    .Parameter SourcePath
+    コピー元ファイルパスを指定する。
+    .Parameter SourceStream
+    コピー元ストリームを [System.IO.Stream] 派生クラス インスタンスで指定する。
+    .Parameter DestinationPath
+    コピー先ファイルパスを指定する。
+    .Parameter DestinationStream
+    コピー先ストリームを [System.IO.Stream] 派生クラス インスタンスで指定する。
+    .Parameter Force
+    コピー元ファイルパスを指定した場合に、ファイルが書き込みオープン中でも可
+    能な場合は開く。但し、処理中にファイル内容が書き換わると部分的に古い一貫
+    性のないコピーが進行し、データが破損するリスクがある。
+    .Parameter Close
+    処理後に各ストリームを閉じる。
+    .Parameter BufferSize
+    内部バッファサイズ。既定は 1 MB。
+    .Parameter SuppressProgress
+    プログレスバーを非表示にする。なお、コピー元ストリームがシーク不可能な場
+    合は本オプション指定に関わらずプログレスバーを表示しない。
+    .Parameter ShowDotProgress
+    処理経過をホストへのドット記号出力で示す。BufferSize でサイズ指定するバッ
+    ファを処理するごとに 1 ドットを出力する。コピー元ストリームがシーク不能な
+    場合でも経過が出力される。
+    #>
     [CmdletBinding(DefaultParametersetName='SourceStreamAndDestinationStream')]
     param(
         [Parameter(Mandatory=$true, ParameterSetName='SourcePathAndDestinationStream', Position=0)]
@@ -586,22 +710,21 @@ function Copy-Stream {
         [Parameter(Mandatory=$true, ParameterSetName='SourcePathAndDestinationStream', Position=1)]
         [Parameter(Mandatory=$true, ParameterSetName='SourceStreamAndDestinationStream', Position=1)]
         [System.IO.Stream] $DestinationStream,
-        [Parameter(Mandatory=$false, ParameterSetName='SourceStreamAndDestinationPath', Position=2)]
         [Parameter(Mandatory=$false, ParameterSetName='SourcePathAndDestinationStream', Position=2)]
         [switch] $Force,
-        [Parameter(Mandatory=$false, ParameterSetName='SourceStreamAndDestinationPath', Position=3)]
+        [Parameter(Mandatory=$false, ParameterSetName='SourceStreamAndDestinationPath', Position=2)]
         [Parameter(Mandatory=$false, ParameterSetName='SourcePathAndDestinationStream', Position=3)]
         [Parameter(Mandatory=$false, ParameterSetName='SourceStreamAndDestinationStream', Position=2)]
         [switch] $Close,
-        [Parameter(Mandatory=$false, ParameterSetName='SourceStreamAndDestinationPath', Position=4)]
+        [Parameter(Mandatory=$false, ParameterSetName='SourceStreamAndDestinationPath', Position=3)]
         [Parameter(Mandatory=$false, ParameterSetName='SourcePathAndDestinationStream', Position=4)]
         [Parameter(Mandatory=$false, ParameterSetName='SourceStreamAndDestinationStream', Position=3)]
         [int] $BufferSize = (1024*1024),
-        [Parameter(Mandatory=$false, ParameterSetName='SourceStreamAndDestinationPath', Position=5)]
+        [Parameter(Mandatory=$false, ParameterSetName='SourceStreamAndDestinationPath', Position=4)]
         [Parameter(Mandatory=$false, ParameterSetName='SourcePathAndDestinationStream', Position=5)]
         [Parameter(Mandatory=$false, ParameterSetName='SourceStreamAndDestinationStream', Position=4)]
         [switch] $SuppressProgress,
-        [Parameter(Mandatory=$false, ParameterSetName='SourceStreamAndDestinationPath', Position=6)]
+        [Parameter(Mandatory=$false, ParameterSetName='SourceStreamAndDestinationPath', Position=5)]
         [Parameter(Mandatory=$false, ParameterSetName='SourcePathAndDestinationStream', Position=6)]
         [Parameter(Mandatory=$false, ParameterSetName='SourceStreamAndDestinationStream', Position=5)]
         [switch] $ShowDotProgress)
@@ -694,6 +817,21 @@ function Copy-Stream {
 }
 
 function Hash-ByteContent {
+    <#
+    .Synopsis
+    バイト列のハッシュ値を計算する。
+    .Parameter Algorithms
+    [System.Security.Cryptography.HashAlgorithm] の派生クラス インスタンスの
+    配列でアルゴリズムを指定する。
+    .Parameter DisposeAlgorithm
+    アルゴリズムを指定した場合に、ハッシュ値の計算後にアルゴリズムを破棄す
+    る。
+    .Parameter AsString
+    計算結果を HEX 文字列で出力する (既定)。明示的にオフにすると、バイト配列
+    で出力する。
+    .Parameter InputObject
+    ハッシュ値を計算するバイト列を指定する。
+    #>
     param(
         [Parameter(Position=0)]
         [System.Security.Cryptography.HashAlgorithm[]] $Algorithms,
@@ -762,6 +900,37 @@ function Hash-ByteContent {
 }
 
 function Hash-Stream {
+    <#
+    .Synopsis
+    ストリーム入力のハッシュ値を計算する。
+    .Parameter LiteralPath
+    入力ファイルパスを指定する。
+    .Parameter Stream
+    ストリーム入力を [System.IO.Stream] 派生クラス インスタンスで指定する。
+    .Parameter Algorithms
+    [System.Security.Cryptography.HashAlgorithm] の派生クラス インスタンスの
+    配列でアルゴリズムを指定する。
+    .Parameter Force
+    ファイルパスを指定した場合に、ファイルが書き込みオープン中でも可能な場合
+    は開く。但し、処理中にファイル内容が書き換わると不正な計算結果となる。
+    .Parameter Close
+    ストリームを指定した場合に、ハッシュ値の計算後にストリームを閉じる。
+    .Parameter DisposeAlgorithm
+    アルゴリズムを指定した場合に、ハッシュ値の計算後にアルゴリズムを破棄す
+    る。
+    .Parameter AsString
+    計算結果を HEX 文字列で出力する (既定)。明示的にオフにすると、バイト配列
+    で出力する。
+    .Parameter BufferSize
+    内部バッファサイズ。既定は 1 MB。
+    .Parameter SuppressProgress
+    プログレスバーを非表示にする。なお、シーク不可能なストリームの場合は本オ
+    プション指定に関わらずプログレスバーを表示しない。
+    .Parameter ShowDotProgress
+    処理経過をホストへのドット記号出力で示す。BufferSize でサイズ指定するバッ
+    ファを処理するごとに 1 ドットを出力する。入力ストリームがシーク不能な場合
+    でも経過が出力される。
+    #>
     [CmdletBinding(DefaultParametersetName='Stream')]
     param(
         [Parameter(ParameterSetName='LiteralPath', Position=0)]
@@ -898,14 +1067,14 @@ function Hash-Stream {
 
 function Dump-ByteContent {
     <#
-    .Synopsis 
-    バイト列を表示する。
+    .Synopsis
+    バイト列をコンソール向けに出力する。
     .Parameter StartAddress
     開始アドレスを指定する。
     .Parameter Address64
     アドレス列を 64 ビット表示にする。デフォルトは 32 ビット。
     .Parameter Capital
-    大文字を指定する。デフォルトは小文字。
+    16 進数を大文字で出力する。デフォルトは小文字。
     .Parameter BytesPerLine
     1 行に出力するバイト数を 8 の倍数で指定する。デフォルトは 8。
     .Parameter Encoding
@@ -922,7 +1091,7 @@ function Dump-ByteContent {
     テキスト表示するとき、結合文字およびサロゲート文字をピリオド記号 "." へ
     置き換える。RawCombiningChar および RawSurrogate と排他。
     .Parameter InputObject
-    表示するバイト配列。
+    表示するバイト列を指定する。
     .Example 
     #>
     [CmdletBinding(DefaultParametersetName='FullUnicode')]
