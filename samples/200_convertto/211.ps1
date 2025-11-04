@@ -1,0 +1,26 @@
+﻿
+# 3 バイトごとに "-" を打つ。
+$hexstring = ConvertFrom-ByteContent -InputObject $samplebytelist[1] -SeparatorHash @{3='-'}
+Assert ($hexstring -ceq '081329-39425b-6e7b8b-97a2b7-cadfe5-f3051b-243644-586c7b-8f9ea3-bcc3db-e7fa')
+
+# 区切り文字は大文字化されない。
+$hexstring = ConvertFrom-ByteContent -InputObject $samplebytelist[1] -SeparatorHash @{3='x'} -Capital
+Assert ($hexstring -ceq '081329x39425Bx6E7B8Bx97A2B7xCADFE5xF3051Bx243644x586C7Bx8F9EA3xBCC3DBxE7FA')
+
+# 3 バイトごとに "-" を、
+# 16 バイトごとに "__" を、
+# 48 バイトごとに "**" を打つ。
+# (32 バイトしか与えていないので "**" は表れない)
+$hexstring = ConvertFrom-ByteContent -InputObject $samplebytelist[1] -SeparatorHash @{3='-'; 16='__'; 48='**'}
+Assert ($hexstring -ceq '081329-39425b-6e7b8b-97a2b7-cadfe5-f3__051b-243644-586c7b-8f9ea3-bcc3db-e7fa')
+
+# 4 バイトごとに "-" を、
+# 8 バイトごとに "_" を打つ。(長周期の区切り文字はより短周期の区切り文字を上書きする。)
+$hexstring = ConvertFrom-ByteContent -InputObject $samplebytelist[1] -SeparatorHash @{4='-'; 16='_'}
+Assert ($hexstring -ceq '08132939-425b6e7b-8b97a2b7-cadfe5f3_051b2436-44586c7b-8f9ea3bc-c3dbe7fa')
+
+# 1 バイトごとにスペースを打つ。
+$hexstring = ConvertFrom-ByteContent -InputObject $samplebytelist[1] -SeparatorHash @{1=' '}
+Assert ($hexstring -ceq '08 13 29 39 42 5b 6e 7b 8b 97 a2 b7 ca df e5 f3 05 1b 24 36 44 58 6c 7b 8f 9e a3 bc c3 db e7 fa')
+
+

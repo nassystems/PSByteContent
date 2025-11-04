@@ -3,7 +3,7 @@
 PSByteContentLib
 PowerShell でバイナリを扱うための関数群。
 .NOTES
-PSByteContentLib version 1.00
+PSByteContentLib version 1.01
 
 MIT License
 
@@ -897,6 +897,34 @@ function Hash-Stream {
 }
 
 function Dump-ByteContent {
+    <#
+    .Synopsis 
+    バイト列を表示する。
+    .Parameter StartAddress
+    開始アドレスを指定する。
+    .Parameter Address64
+    アドレス列を 64 ビット表示にする。デフォルトは 32 ビット。
+    .Parameter Capital
+    大文字を指定する。デフォルトは小文字。
+    .Parameter BytesPerLine
+    1 行に出力するバイト数を 8 の倍数で指定する。デフォルトは 8。
+    .Parameter Encoding
+    テキスト表示するときのエンコーディング。[System.Text.Encoding] の派生ク
+    ラスを指定する。$null を明示するとテキスト表示をしない。デフォルトは
+    UTF8。
+    .Parameter RawCombiningChar
+    テキスト表示するとき、結合文字をそのまま出力する。デフォルトは結合文字の
+    直前にゼロ幅スペース (U+200b) を挿入し、基底文字と結合しないようにする。
+    .Parameter RawSurrogate
+    テキスト表示するとき、サロゲート文字をそのまま出力する。デフォルトは四角
+    記号 "□" に置き換える。
+    .Parameter PrintableOnly
+    テキスト表示するとき、結合文字およびサロゲート文字をピリオド記号 "." へ
+    置き換える。RawCombiningChar および RawSurrogate と排他。
+    .Parameter InputObject
+    表示するバイト配列。
+    .Example 
+    #>
     [CmdletBinding(DefaultParametersetName='FullUnicode')]
     param(
         [Parameter(Position=0)] [Int64]  $StartAddress,
@@ -905,9 +933,9 @@ function Dump-ByteContent {
         [Parameter(Position=3)] [int]    $BytesPerLine = 16,
         [Parameter(Position=4)] [System.Text.Encoding] $Encoding = [System.Text.Encoding]::UTF8,
         [Parameter(ParameterSetName='FullUnicode', Position=5)]
-        [switch] $ParseCombiningChar,
+        [switch] $RawCombiningChar,
         [Parameter(ParameterSetName='FullUnicode', Position=6)]
-        [switch] $ParseSurrogate,
+        [switch] $RawSurrogate,
         [Parameter(ParameterSetName='PrintableOnly', Position=5)]
         [switch] $PrintableOnly,
         [Parameter(ParameterSetName='FullUnicode',   Position=7, Mandatory=$true, ValueFromPipeline=$true)]
@@ -977,7 +1005,7 @@ function Dump-ByteContent {
                         if($PrintableOnly.IsPresent) {
                             [void] $decodedtext.Append('.')
                         } else {
-                            if(-not $ParseCombiningChar) {
+                            if(-not $RawCombiningChar) {
                                 [void] $decodedtext.Append([char] 0x200b)
                             }
                             [void] $decodedtext.Append($chararray[$ix])
@@ -987,7 +1015,7 @@ function Dump-ByteContent {
                         if($PrintableOnly.IsPresent) {
                             [void] $decodedtext.Append('.')
                         } else {
-                            if(-not $ParseCombiningChar) {
+                            if(-not $RawCombiningChar) {
                                 [void] $decodedtext.Append([char] 0x200b)
                             }
                             [void] $decodedtext.Append($chararray[$ix])
@@ -997,7 +1025,7 @@ function Dump-ByteContent {
                         if($PrintableOnly.IsPresent) {
                             [void] $decodedtext.Append('.')
                         } else {
-                            if($ParseSurrogate) {
+                            if($RawSurrogate) {
                                 [void] $decodedtext.Append($chararray[$ix])
                             } else {
                                 [void] $decodedtext.Append('□')
