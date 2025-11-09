@@ -2,7 +2,19 @@
 
 PowerShell で BOM をちょっと覗き見たり各種ヘッダーの BASE64 テキストをデコードしたり、バイト列をちょっと便利に扱えれば良いなくらいの軽い気持ちで作った関数群。
 
-実行すると関数を定義する。ソース演算子で (自スコープで) 本スクリプトを実行たのち各種関数を呼び出しするのが、想定される使い方。
+実行すると関数を定義する。ソース演算子で (自スコープで) 本スクリプトを実行たのち
+
+```PowerShell
+. .\PSByteContentLib.ps1
+```
+
+各種関数を呼び出しする
+
+```
+Get-ByteContent fromfilepath | Dump-ByteContent
+```
+
+のが、想定される使い方。
 
 ## 詳細
 
@@ -28,11 +40,11 @@ Get-ByteContenct fromfilepath | Select-ByteContent -First 0x100 | Add-ByteConten
 
 #### ConvertFrom-ByteContent
 
-バイト列を HEX 文字列へ変換する。
+バイト列を HEX 文字列または BASE64 文字列へ変換する。
 
 #### ConvertTo-ByteContent
 
-HEX 文字列をバイト列へ変換する。
+HEX 文字列または BASE64 文字列をバイト列へ変換する。
 
 #### Open-FileStream
 

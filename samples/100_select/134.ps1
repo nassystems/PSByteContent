@@ -1,6 +1,6 @@
 ﻿& {
 # 配列平滑化により 1 バイトずつに分割される
-# 全ての要素が 1 バイトずつの場合、結合したバイト配列になる
+# 1 バイトずつの要素がバイト配列になる
 $part = $samplebytelist[0] | Select-ByteContent
 Assert ($part.GetType() -eq [System.Byte[]])
 Assert ($part.Length -eq 32)
@@ -23,7 +23,7 @@ Assert ([convert]::ToBase64String($part) -eq $sampleb64list[2])
 }
 
 & {
-# 連続した 1 バイトのみがバイト配列へ変換される。
+# 連続した 1 バイトがバイト配列へ変換される。
 $arraywrapper.Clear()
 $samplebytelist[0] |% {
     $b = New-Object byte[] 1
@@ -43,10 +43,14 @@ Assert ($part.GetType() -eq [System.Object[]])
 Assert ($part.Length -eq 4)
 Assert ($part[0].GetType() -eq [System.Byte[]])
 Assert ($part[0].Length -eq 32)
+Assert ([convert]::ToBase64String($part[0]) -eq $sampleb64list[0])
 Assert ($part[1].GetType() -eq [System.Byte[]])
 Assert ($part[1].Length -eq 32)
+Assert ([convert]::ToBase64String($part[1]) -eq $sampleb64list[1])
 Assert ($part[2].GetType() -eq [System.Byte[]])
 Assert ($part[2].Length -eq 32)
+Assert ([convert]::ToBase64String($part[2]) -eq $sampleb64list[2])
 Assert ($part[3].GetType() -eq [System.Byte[]])
 Assert ($part[3].Length -eq 32)
+Assert ([convert]::ToBase64String($part[3]) -eq $sampleb64list[3])
 }

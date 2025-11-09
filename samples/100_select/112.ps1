@@ -50,3 +50,62 @@ while($ix -lt $samplebytelist.Count) {
     }
 }
 }
+
+&{
+$part = $samplebytelist | Select-ByteContent -Last 32 -Skip 32
+Assert ($part.GetType() -eq [System.Byte[]])
+Assert ($part.Length -eq 32)
+Assert ([convert]::ToBase64String($part) -eq $sampleb64list[$sampleb64list.Count -2])
+}
+&{
+$part = $samplebytelist | Select-ByteContent -Last 32 -Skip 64
+Assert ($part.GetType() -eq [System.Byte[]])
+Assert ($part.Length -eq 32)
+Assert ([convert]::ToBase64String($part) -eq $sampleb64list[$sampleb64list.Count -3])
+}
+&{
+$part = $samplebytelist | Select-ByteContent -Last 64 -Skip 64
+Assert ($part.GetType() -eq [System.Object[]])
+Assert ($part.Length -eq 2)
+$ix = 0
+while($ix -lt $part.Length) {
+    Assert ($part[$ix].GetType() -eq [System.Byte[]])
+    Assert ($part[$ix].Length -eq 32)
+    Assert ([convert]::ToBase64String($part[$ix]) -eq $sampleb64list[$sampleb64list.Count -2 -$part.Length +$ix])
+    ++$ix
+}
+}
+&{
+$part = $samplebytelist | Select-ByteContent -Last 64 -Skip 64
+Assert ($part.GetType() -eq [System.Object[]])
+Assert ($part.Length -eq 2)
+$ix = 0
+while($ix -lt $part.Length) {
+    Assert ($part[$ix].GetType() -eq [System.Byte[]])
+    Assert ($part[$ix].Length -eq 32)
+    Assert ([convert]::ToBase64String($part[$ix]) -eq $sampleb64list[$sampleb64list.Count -2 -$part.Length +$ix])
+    ++$ix
+}
+}
+&{
+$part = $samplebytelist | Select-ByteContent -Last 64 -Skip 16
+Assert ($part.GetType() -eq [System.Object[]])
+Assert ($part.Length -eq 3)
+Assert ($part[0].GetType() -eq [byte[]])
+Assert ($part[0].Length -eq 16)
+$skip = 16
+$ix = 0
+for($ix = 0; $ix -lt $part[0].Length; ++$ix) {
+    Assert ($part[0][$ix] -eq $samplebytelist[29][$skip +$ix])
+}
+Assert ($part[1].GetType() -eq [byte[]])
+Assert ($part[1].Length -eq 32)
+Assert ([convert]::ToBase64String($part[1]) -eq $sampleb64list[30])
+Assert ($part[2].GetType() -eq [byte[]])
+Assert ($part[2].Length -eq 16)
+$skip = 0
+$ix = 0
+for($ix = 0; $ix -lt $part[2].Length; ++$ix) {
+    Assert ($part[2][$ix] -eq $samplebytelist[31][$skip +$ix])
+}
+}

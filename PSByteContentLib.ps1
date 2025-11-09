@@ -3,7 +3,7 @@
 PSByteContentLib
 PowerShell でバイナリを扱うための関数群。
 .NOTES
-PSByteContentLib version 1.02
+PSByteContentLib version 1.03
 
 MIT License
 
@@ -48,15 +48,16 @@ function Select-ByteContent {
     param(
         [Parameter(Position=0, ParameterSetName='First')]
         [int64] $First = [int64]::MaxValue,
-        [Parameter(Position=1, ParameterSetName='First')]
-        [int64] $Skip = [int64] 0,
         [Parameter(Position=0, ParameterSetName='Last')]
         [int64] $Last,
-        [Parameter(Position=2, ParameterSetName='First')]
         [Parameter(Position=1, ParameterSetName='Last')]
+        [Parameter(Position=1, ParameterSetName='First')]
+        [int64] $Skip = [int64] 0,
+        [Parameter(Position=2, ParameterSetName='First')]
+        [Parameter(Position=2, ParameterSetName='Last')]
         [switch] $AsByte,
         [Parameter(Position=3, Mandatory=$true, ValueFromPipeline=$true, ParameterSetName='First')]
-        [Parameter(Position=2, Mandatory=$true, ValueFromPipeline=$true, ParameterSetName='Last')]
+        [Parameter(Position=3, Mandatory=$true, ValueFromPipeline=$true, ParameterSetName='Last')]
         [Byte[]] $InputObject)
     begin {
         $ErrorActionPreference = [System.Management.Automation.ActionPreference]::Stop
@@ -122,7 +123,7 @@ function Select-ByteContent {
             }
             $lastbuffercount.Add(0)
             
-            while($lastbuffercount[0] -gt $Last) {
+            while($lastbuffercount[0] -gt ($Last +$Skip)) {
                 $lastbuffer.RemoveAt(0)
                 $lastbuffercount.RemoveAt(0)
             }
@@ -162,12 +163,12 @@ function Select-ByteContent {
     end {
         if($lastlogic) {
             $totalbufferedlength = $lastbuffercount[0] +$lastbuffer[0].Length
-            if($totalbufferedlength -gt $Last) {
-                $skipcount = $totalbufferedlength -$Last
+            if($totalbufferedlength -gt ($Last +$Skip)) {
+                $skipcount = $totalbufferedlength -$Last -$Skip
             } else {
                 $skipcount = 0
             }
-            $lastbuffer | Select-ByteContent -Skip $skipcount -AsByte:$AsByte
+            $lastbuffer | Select-ByteContent -First $Last -Skip $skipcount -AsByte:$AsByte
         } else {
             if($null -ne $onebytelist) {
                 if($onebytelist.Count -gt 0) {
@@ -183,139 +184,252 @@ function Select-ByteContent {
 function ConvertFrom-ByteContent {
     <#
     .Synopsis 
-    バイト列を HEX 文字列へ変換する。
+    バイト列を文字列へ変換する。
     .Parameter BlockLength
-    区切り文字を挿入するバイト数配列を指定する。SeparatorHash と排他。
+    区切り文字または改行を挿入するバイト数 (Hex 文字列の場合) または文字数
+    (Base64 の場合) を指定する。SeparatorHash と排他。
     .Parameter Separator
-    BlockLength で指定したバイト数ごとに挿入する区切り文字列を指定する。
-    BlockLength で指定するのと同数の区切り文字列を指定する必要がある。
-    SeparatorHash と排他。
+    Hex 文字列へ変換する場合、BlockLength で指定したバイト数ごとに挿入する区
+    切り文字列を指定する。対応する文字列を指定しなかった区切り位置では文字列
+    が分割される。SeparatorHash と排他。
     .Parameter SeparatorHash
-    区切り文字列をハッシュリストで指定する。キーに区切り長を、値に区切り文字
-    列を指定する。BlockLength および Separator と排他。
+    HEX 文字列へ変換する場合、区切り文字列をハッシュリストで指定する。キーに
+    区切り長を、値に区切り文字]列を指定する。文字列を指定せず $null を指定し
+    た位置では文字列が分割される。BlockLength および Separator と排他。
     .Parameter Capital
-    16 進数を大文字で出力する。デフォルトは小文字。
+    16 進数を大文字で出力する。既定は小文字。
+    .Parameter Base64
+    Base64 文字列を出力する。既定は HEX 文字列。
     .Parameter InputObject
     変換するバイト列を指定する。
     #>
-    [CmdletBinding(DefaultParametersetName='SeparatorHash')]
+    [CmdletBinding(DefaultParametersetName='SeparatorHashHex')]
     param(
-        [Parameter(Position=0, ParameterSetName='Separators')]
+        [Parameter(Position=0, ParameterSetName='SeparatorsHex')]
+        [Parameter(Position=0, ParameterSetName='SeparatorsB64')]
         [Alias('BlockLengths')]
         [int[]]   $BlockLength,
-        [Parameter(Position=1, ParameterSetName='Separators')]
+        [Parameter(Position=1, ParameterSetName='SeparatorsHex')]
         [Alias('Separators')]
         [string[]] $Separator,
-        [Parameter(Position=0, ParameterSetName='SeparatorHash')]
+        [Parameter(Position=0, ParameterSetName='SeparatorHashHex')]
         [hashtable] $SeparatorHash,
-        [Parameter(Position=2, ParameterSetName='Separators')]
-        [Parameter(Position=1, ParameterSetName='SeparatorHash')]
-        [switch]   $Capital,
-        [Parameter(Position=3, ParameterSetName='Separators',    ValueFromPipeline=$true)]
-        [Parameter(Position=2, ParameterSetName='SeparatorHash', ValueFromPipeline=$true)]
+        [Parameter(Position=2, ParameterSetName='SeparatorsHex')]
+        [Parameter(Position=1, ParameterSetName='SeparatorHashHex')]
+        [switch] $Capital,
+        [Parameter(Position=1, ParameterSetName='SeparatorsB64')]
+        [switch] $Base64,
+        [Parameter(Position=3, ParameterSetName='SeparatorsHex',    ValueFromPipeline=$true)]
+        [Parameter(Position=2, ParameterSetName='SeparatorHashHex', ValueFromPipeline=$true)]
+        [Parameter(Position=2, ParameterSetName='SeparatorsB64',    ValueFromPipeline=$true)]
         [Byte[]] $InputObject)
     begin {
         $ErrorActionPreference = [System.Management.Automation.ActionPreference]::Stop
         Set-StrictMode -Version 3
         
-        if($null -eq (Get-Variable -Scope Local |? {$_.Name -eq 'SeparatorHash'} |% {$_.Value})) {
+        if($null -eq $SeparatorHash) {
             $SeparatorHash = @{}
         }
         
-        if($PSCmdlet.ParameterSetName -eq 'Separators') {
-            try {
+        if($PSCmdlet.ParameterSetName -eq 'SeparatorsHex' -or $PSCmdlet.ParameterSetName -eq 'SeparatorsB64') {
+            if($null -ne $BlockLength) {
                 for($ix = 0; $ix -lt $BlockLength.Length; ++$ix) {
-                    $SeparatorHash.Add($BlockLength[$ix], $Separator[$ix])
+                    if($null -ne $Separator -and $Separator.Length -gt $ix) {
+                        $SeparatorHash.Add($BlockLength[$ix], $Separator[$ix])
+                    } else {
+                        $SeparatorHash.Add($BlockLength[$ix], $null)
+                    }
                 }
-            } catch {
-                Write-Error -ErrorRecord (New-Object System.Management.Automation.ErrorRecord (New-Object System.ArgumentException 'Separator および BlockLength が有効ではありません。'), $null, ([System.Management.Automation.ErrorCategory]::InvalidArgument), $null)
             }
         }
         
         $blocklengthlist = New-Object System.Collections.Generic.List[int]
         $blockcountlist  = New-Object System.Collections.Generic.Dictionary[int`,int]
-        $separatorlist   = New-Object System.Collections.Generic.Dictionary[int`,string]
         $byteseparator = [string]::Empty
         
         $SeparatorHash.Keys | Sort-Object |% {
             if($_ -ne 1) {
                 $blocklengthlist.Add($_)
                 $blockcountlist[$_] = 0
-                $separatorlist[$_]  = $SeparatorHash[$_]
             } else {
                 $byteseparator = $SeparatorHash[1]
             }
         }
         
-        $separatorstring = [string]::Empty
+        if($Base64.IsPresent) {
+            $threebytescount = 0
+            $threebytesbuffer = New-Object Byte[] 3
+        } else {
+            $separatorstring = [string]::Empty
+        }
+        
         $Result = New-Object System.Text.StringBuilder
     }
     process {
-        $inputcount = 0
-        
-        while($inputcount -lt $InputObject.Length) {
-            $Result.Append($separatorstring) | Out-Null
+        if($Base64.IsPresent) {
+            if($threebytescount -ne 0 -and $InputObject.Length +$threebytescount -ge 3) {
+                $inputcount = 3 -$threebytescount
+                [Byte[]]::Copy($InputObject, 0, $threebytesbuffer, $threebytescount, $inputcount)
+                $threebytescount = $threebytescount +$inputcount
+                [void] $Result.Append([System.Convert]::ToBase64String($threebytesbuffer))
+                $threebytescount = 0
+            } else {
+                $inputcount = 0
+            }
+            $threebytesbufferblocks = [math]::Floor(($InputObject.Length -$inputcount)/3)
+            [void] $Result.Append([System.Convert]::ToBase64String($InputObject, $inputcount, $threebytesbufferblocks*3))
+            $inputcount = $inputcount +$threebytesbufferblocks*3
             
-            $nextblocklength = 0
-            $targetlength = [int]::MaxValue
-            $separatorstring = [string]::Empty
-            foreach($blocklen in $blocklengthlist) {
-                $blockcount = $blockcountlist[$blocklen]
-                if($targetlength -ge ($blocklen -$blockcount)) {
-                    $nextblocklength = $blocklen
-                    $separatorstring = $separatorlist[$blocklen]
-                    $targetlength    = $blocklen -$blockcount
+            [Byte[]]::Copy($InputObject, $inputcount, $threebytesbuffer, $threebytescount, $InputObject.Length -$inputcount)
+            $threebytescount = $threebytescount +$InputObject.Length -$inputcount
+            
+            do {
+                $targetlength = [int]::MaxValue
+                foreach($blocklen in $blocklengthlist) {
+                    $blockcount = $blockcountlist[$blocklen]
+                    if($targetlength -ge ($blocklen -$blockcount)) {
+                        $separatorstring = $SeparatorHash[$blocklen]
+                        $targetlength    = $blocklen -$blockcount
+                    }
                 }
-            }
-            if(($InputObject.Length -$inputcount) -lt $targetlength) {
-                $targetlength = $InputObject.Length -$inputcount
-                $separatorstring = $byteseparator
-            }
-            $blocklengthlist |% {
-                $blockcountlist[$_] = ($blockcountlist[$_] +$targetlength) % $_
-            }
+                $blocklengthlist |% {
+                    $blockcountlist[$_] = ($blockcountlist[$_] +$targetlength) % $_
+                }
+                if($Result.Length -ge $targetlength) {
+                    $Result.ToString(0, $targetlength)
+                    [void] $Result.Remove(0, $targetlength)
+                } else {
+                    break
+                }
+            } while($true)
+        } else {
+            $inputcount = 0
             
-            $targetbyte = Select-ByteContent -First $targetlength -Skip $inputcount -InputObject $InputObject
-            $bytetext = [System.BitConverter]::ToString($targetbyte)
-            if(-not $Capital) {
-                $bytetext = $bytetext.ToLower()
+            while($inputcount -lt $InputObject.Length) {
+                if($null -eq $separatorstring) {
+                    $Result.ToString()
+                    [void] $Result.Clear()
+                } else {
+                    [void] $Result.Append($separatorstring)
+                }
+                
+                $nextblocklength = 0
+                $targetlength = [int]::MaxValue
+                $separatorstring = [string]::Empty
+                foreach($blocklen in $blocklengthlist) {
+                    $blockcount = $blockcountlist[$blocklen]
+                    if($targetlength -ge ($blocklen -$blockcount)) {
+                        $nextblocklength = $blocklen
+                        $separatorstring = $SeparatorHash[$blocklen]
+                        $targetlength    = $blocklen -$blockcount
+                    }
+                }
+                if(($InputObject.Length -$inputcount) -lt $targetlength) {
+                    $targetlength = $InputObject.Length -$inputcount
+                    $separatorstring = $byteseparator
+                }
+                $blocklengthlist |% {
+                    $blockcountlist[$_] = ($blockcountlist[$_] +$targetlength) % $_
+                }
+                
+                $targetbyte = Select-ByteContent -First $targetlength -Skip $inputcount -InputObject $InputObject
+                $bytetext = [System.BitConverter]::ToString($targetbyte)
+                if(-not $Capital) {
+                    $bytetext = $bytetext.ToLower()
+                }
+                $bytetext = $bytetext.Replace('-', $byteseparator)
+                [void] $Result.Append($bytetext)
+                $inputcount = $inputcount +$targetlength
             }
-            $bytetext = $bytetext.Replace('-', $byteseparator)
-            $Result.Append($bytetext) | Out-Null
-            $inputcount = $inputcount +$targetlength
         }
     }
     end {
-        $Result.ToString()
+        if($Base64.IsPresent) {
+            if($threebytescount -ne 0) {
+                [void] $Result.Append([System.Convert]::ToBase64String($threebytesbuffer, 0, $threebytescount))
+                do {
+                    $targetlength = [int]::MaxValue
+                    foreach($blocklen in $blocklengthlist) {
+                        $blockcount = $blockcountlist[$blocklen]
+                        if($targetlength -ge ($blocklen -$blockcount)) {
+                            $separatorstring = $SeparatorHash[$blocklen]
+                            $targetlength    = $blocklen -$blockcount
+                        }
+                    }
+                    $blocklengthlist |% {
+                        $blockcountlist[$_] = ($blockcountlist[$_] +$targetlength) % $_
+                    }
+                    if($Result.Length -ge $targetlength) {
+                        $Result.ToString(0, $targetlength)
+                        [void] $Result.Remove(0, $targetlength)
+                    } else {
+                        break
+                    }
+                } while($true)
+            }
+        }
+        if($Result.Length -gt 0) {
+            $Result.ToString()
+        }
     }
 }
 
 function ConvertTo-ByteContent {
     <#
     .Synopsis 
-    HEX 文字列をバイト列へ変換する。
+    文字列をバイト列へ変換する。
     .Description
-    文字列から 16 進数 2 桁ずつを抽出し、Byte 値へ変換する。それ以外の文字や 1 桁の 16 進数は無視される。
+    HEX 文字列の場合、文字列から 16 進数 2 桁ずつを抽出し Byte 値へ変換する。それ以外の文字や 1 桁の 16 進数は無視される。
+    .Parameter Base64
+    Base64 文字列を変換する。既定は Hex 文字列。
     .Parameter InputObject
-    変換するHEX 文字列を指定する。
+    変換する文字列を指定する。
     #>
-    [CmdletBinding()]
+    [CmdletBinding(DefaultParametersetName='Hex')]
     param(
-        [Parameter(Position=0, Mandatory=$true, ValueFromPipeline=$true)]
+        [Parameter(Position=0, ParameterSetName='Base64')]
+        [switch] $Base64,
+        [Parameter(Position=0, ParameterSetName='Hex',    Mandatory=$true, ValueFromPipeline=$true)]
+        [Parameter(Position=1, ParameterSetName='Base64', Mandatory=$true, ValueFromPipeline=$true)]
         [string] $InputObject)
     begin {
+        if($Base64.IsPresent) {
+            $fourcharsbuffer = New-Object System.Text.StringBuilder 4
+        } else {
+            $hexstringpattern = New-Object System.Text.RegularExpressions.Regex '[0-9a-fA-F]{2}'
+        }
         $bytecontent = New-Object System.Collections.Generic.List[byte]
-        $hexstringpattern = New-Object System.Text.RegularExpressions.Regex '[0-9a-fA-F]{2}'
         $resultwrapper = New-Object System.Collections.Generic.List[byte[]]
     }
     process {
-        $bytecontent.Clear()
-        $resultwrapper.Clear()
-        $hexstringpattern.Matches($InputObject) |% {
-            $bytecontent.Add([byte]::Parse($_.Value, [System.Globalization.NumberStyles]::AllowHexSpecifier))
+        if($Base64.IsPresent) {
+            if($fourcharsbuffer.Length -ne 0 -and $InputObject.Length +$fourcharsbuffer.Length -ge 4) {
+                $inputcount = 4- $fourcharsbuffer.Length
+                [void] $fourcharsbuffer.Append($InputObject, 0, $inputcount)
+                $bytecontent.AddRange([System.Convert]::FromBase64String($fourcharsbuffer.ToString()))
+                [void] $fourcharsbuffer.Clear()
+            } else {
+                $inputcount = 0
+            }
+            $fourcharsbufferblocks = [math]::Floor(($InputObject.Length -$inputcount)/4)
+            if($fourcharsbufferblocks -gt 0) {
+                $bytecontent.AddRange([System.Convert]::FromBase64String($InputObject.Substring($inputcount, $fourcharsbufferblocks*4)))
+                $inputcount = $inputcount +$fourcharsbufferblocks*4
+            }
+            if($InputObject.Length -gt $inputcount) {
+                [void] $fourcharsbuffer.Append($InputObject, $inputcount, $InputObject.Length -$inputcount)
+            }
+        } else {
+            $hexstringpattern.Matches($InputObject) |% {
+                $bytecontent.Add([byte]::Parse($_.Value, [System.Globalization.NumberStyles]::AllowHexSpecifier))
+            }
         }
-        $resultwrapper.Add($bytecontent.ToArray())
-        $resultwrapper
+        if($bytecontent.Count -gt 0) {
+            $resultwrapper.Clear()
+            $resultwrapper.Add($bytecontent.ToArray())
+            $resultwrapper
+            $bytecontent.Clear()
+        }
     }
 }
 
@@ -1150,7 +1264,7 @@ function Dump-ByteContent {
             $chararray   = New-Object char[] 16
             $decodedtext = New-Object System.Text.StringBuilder ($BytesPerLine*2)
         }
-        function dodecodecchars {
+        function dodecodedchars {
             for($ix = 0; $ix -lt $decodecount; ++$ix) {
                 switch ([char]::GetUnicodeCategory($chararray[$ix])) {
                     ([System.Globalization.UnicodeCategory]::Control) {
@@ -1260,30 +1374,25 @@ function Dump-ByteContent {
                     $stemcharlength = $decodedtext.Length
                 }
                 if($decodecount -gt 0) {
-                    dodecodecchars
+                    dodecodedchars
                     if($stemstrinfolength -lt [int]::MaxValue) {
                         $decodedstrinfo = [System.Globalization.StringInfo]::ParseCombiningCharacters($decodedtext.ToString())
                         if($decodedstrinfo.Length -gt $stemstrinfolength) {
                             $rmpos = $decodedstrinfo[$stemstrinfolength]
                             
-                            $nextdecodedlinetext =$decodedtext.ToString().Substring($rmpos)
-                            $decodedlinetext = $decodedtext.Remove(
-                                $rmpos,
-                                $decodedtext.Length -$rmpos).ToString()
-                            $decodedtext.Clear().Append($nextdecodedlinetext) | Out-Null
-                            
-                            $bytecountperline = $bytecountperline % 8
-                            if($bytecountperline -eq $BytesPerLine -1) {
-                                $stemcharlength = $decodedtext.Length
-                            }
-                            $stemstrinfolength = [int]::MaxValue
-                            
-                            '{0}{2}{1}' -f $bytestring[0], $decodedlinetext, $textsplitter
+                            '{0}{2}{1}' -f $bytestring[0], $decodedtext.ToString(0, $rmpos), $textsplitter
+                            [void] $decodedtext.Remove(0, $rmpos)
                             $bytestring.RemoveAt(0)
                             if($bytestring.Count -gt 0) {
                                 $bytestring
                                 $bytestring.Clear()
                             }
+                            
+                            $bytecountperline = $bytecountperline % $BytesPerLine
+                            if($bytecountperline -eq $BytesPerLine -1) {
+                                $stemcharlength = $decodedtext.Length
+                            }
+                            $stemstrinfolength = [int]::MaxValue
                         }
                     } elseif($stemcharlength -lt $decodedtext.Length) {
                         $stemcharlength = [int]::MaxValue
@@ -1296,7 +1405,7 @@ function Dump-ByteContent {
     end {
         if($null -ne $Encoding) {
             $decodecount = $decoder.GetChars($InputObject, 0, 0, $chararray, 0, $true)
-            dodecodecchars
+            dodecodedchars
             
             while($address % $BytesPerLine -ne 0) {
                 if($address % 8 -eq 0) {
