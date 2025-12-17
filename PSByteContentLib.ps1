@@ -3,7 +3,7 @@
 PSByteContentLib
 PowerShell でバイナリを扱うための関数群。
 .NOTES
-PSByteContentLib version 1.03
+PSByteContentLib version 1.04
 
 MIT License
 
@@ -624,6 +624,11 @@ function Get-ByteContent {
     
     $tgtstream = $null
     $resultwrapper = New-Object System.Collections.Generic.List[byte[]]
+    
+    # init for progress
+    $refreshprogress = [datetime]::MaxValue
+    [long] $totallength = 0
+    
     $disposerequiredlist = New-Object 'System.Collections.Generic.List[System.IDisposable]'
     try {
         switch($PsCmdlet.ParameterSetName) {
@@ -647,9 +652,6 @@ function Get-ByteContent {
             }
         }
         
-        # for progress
-        $refreshprogress = [datetime]::MaxValue
-        [long] $totallength = 0
         if(-not $SuppressProgress.IsPresent -and $tgtstream.CanSeek) {
             $totallength = [math]::Min($First, $tgtstream.Length -$tgtstream.Position)
             $refreshprogress = [datetime]::Now +[timespan]::FromSeconds(1)
@@ -726,7 +728,9 @@ function Get-ByteContent {
             }
         } until($true)
     } finally {
-        Write-Progress -Activity 'Get-ByteContent' -Status 'done' -Completed
+        if($refreshprogress -lt [datetime]::MaxValue) {
+            Write-Progress -Activity 'Get-ByteContent' -Status 'done' -Completed
+        }
         $disposerequiredlist |% {$_.Dispose()}
     }
 }
@@ -850,6 +854,11 @@ function Copy-Stream {
     [int64] $totalread = 0
     [int64] $skipread = 0
     
+    # init for progress
+    $refreshprogress = [datetime]::MaxValue
+    $showprogress = $false
+    [long] $totallength = 0
+    
     $disposerequiredlist = New-Object System.Collections.Generic.List[System.IDisposable]
     try {
         [System.IO.Stream] $source = $null
@@ -883,10 +892,6 @@ function Copy-Stream {
             }
         }
         
-        # for progress
-        $refreshprogress = [datetime]::MaxValue
-        $showprogress = $false
-        [long] $totallength = 0
         if(-not $SuppressProgress.IsPresent -and $source.CanSeek) {
             $totallength = $source.Length -$source.Position
             $refreshprogress = [datetime]::Now +[timespan]::FromSeconds(1)
@@ -1080,6 +1085,11 @@ function Hash-Stream {
     $buffer = New-Object Byte[] $MaxBufferSize
     [int64] $totalread = 0
     
+    # init for progress
+    $refreshprogress = [datetime]::MaxValue
+    $showprogress = $false
+    [long] $totallength = 0
+    
     $disposerequiredlist = New-Object System.Collections.Generic.List[System.IDisposable]
     try {
         if($null -eq $Algorithms -or $Algorithms.Length -le 0) {
@@ -1117,10 +1127,6 @@ function Hash-Stream {
             }
         }
         
-        # for progress
-        $refreshprogress = [datetime]::MaxValue
-        $showprogress = $false
-        [long] $totallength = 0
         if(-not $SuppressProgress.IsPresent -and $tgtstream.CanSeek) {
             $totallength = $tgtstream.Length -$tgtstream.Position
             $refreshprogress = [datetime]::Now +[timespan]::FromSeconds(1)
@@ -1173,7 +1179,9 @@ function Hash-Stream {
             $result
         }
     } finally {
-        Write-Progress -Activity 'Hash-Stream' -Status 'calclated' -Completed
+        if($showprogress) {
+            Write-Progress -Activity 'Hash-Stream' -Status 'calclated' -Completed
+        }
         $disposerequiredlist |% {$_.Dispose()}
     }
 }
