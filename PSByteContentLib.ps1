@@ -3,11 +3,11 @@
 PSByteContentLib
 PowerShell でバイナリを扱うための関数群。
 .NOTES
-PSByteContentLib version 1.04
+PSByteContentLib version 1.05
 
 MIT License
 
-Copyright (c) 2025 Isao Sato
+Copyright (c) 2025-2026 Isao Sato
 
 Permission is hereby granted, free of charge, to any person obtaining a
 copy of this software and associated documentation files (the
