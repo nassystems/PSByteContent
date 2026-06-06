@@ -219,8 +219,14 @@ function ConvertFrom-ByteContent {
         [switch] $Capital,
         [Parameter(Position=1, ParameterSetName='SeparatorsB64')]
         [switch] $Base64,
-        [Parameter(Position=3, ParameterSetName='SeparatorsHex',    ValueFromPipeline=$true)]
-        [Parameter(Position=2, ParameterSetName='SeparatorHashHex', ValueFromPipeline=$true)]
+        [Parameter(Position=3, ParameterSetName='SeparatorsHex')]
+        [Parameter(Position=2, ParameterSetName='SeparatorHashHex')]
+        [string] $HeaderString,
+        [Parameter(Position=4, ParameterSetName='SeparatorsHex')]
+        [Parameter(Position=3, ParameterSetName='SeparatorHashHex')]
+        [string] $FooterString,
+        [Parameter(Position=5, ParameterSetName='SeparatorsHex',    ValueFromPipeline=$true)]
+        [Parameter(Position=4, ParameterSetName='SeparatorHashHex', ValueFromPipeline=$true)]
         [Parameter(Position=2, ParameterSetName='SeparatorsB64',    ValueFromPipeline=$true)]
         [Byte[]] $InputObject)
     begin {
@@ -264,6 +270,7 @@ function ConvertFrom-ByteContent {
         }
         
         $Result = New-Object System.Text.StringBuilder
+        $Result.Append($HeaderString) | Out-Null
     }
     process {
         if($Base64.IsPresent) {
@@ -368,6 +375,7 @@ function ConvertFrom-ByteContent {
                 } while($true)
             }
         }
+        $Result.Append($FooterString) | Out-Null
         if($Result.Length -gt 0) {
             $Result.ToString()
         }
